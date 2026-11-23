@@ -20,11 +20,15 @@
 #define PIN_LED_RED 2
 #define PIN_LED_GREEN 0
 #define PIN_DHT 23
+#define PIN_PIR 22
 
 #define BLYNK_LED_RED V0
 #define BLYNK_LED_GREEN V1
 #define BLYNK_TEMPERATURE V2
 #define BLYNK_HUMIDITY V3
+#define BLYNK_MOTION V4
+
+int lastMotionState = -1; // -1 = belum pernah dibaca, supaya status awal selalu terkirim
 
 DHT dht(PIN_DHT, DHT22);
 
@@ -58,6 +62,22 @@ BLYNK_CONNECTED()
   // Request the latest state from the server
   Blynk.syncVirtual(BLYNK_LED_RED);
   Blynk.syncVirtual(BLYNK_LED_GREEN);
+  // Kirim ulang status PIR saat (re)connect
+  lastMotionState = -1;
+}
+
+// Membaca sensor PIR; kirim ke V4 hanya saat status berubah (1 = gerakan, 0 = tidak ada)
+void onTimerCheckMotion()
+{
+  int motion = digitalRead(PIN_PIR);
+  if (motion == lastMotionState)
+  {
+    return;
+  }
+
+  lastMotionState = motion;
+  Serial.printf("Motion: %s\r\n", motion ? "DETECTED" : "none");
+  Blynk.virtualWrite(BLYNK_MOTION, motion);
 }
 
 // This function reads the DHT22 every 2 seconds and sends temperature to V2 and humidity to V3.
@@ -81,6 +101,7 @@ void setup()
 {
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_LED_GREEN, OUTPUT);
+  pinMode(PIN_PIR, INPUT);
   digitalWrite(PIN_LED_RED, LOW);
   digitalWrite(PIN_LED_GREEN, LOW);
   // Debug console
@@ -91,6 +112,8 @@ void setup()
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
   // Setup a function to be called every second
   timer.setInterval(2000L, onTimerSendData);
+  // Cek sensor PIR setiap 200 ms
+  timer.setInterval(200L, onTimerCheckMotion);
 }
 
 void loop()
