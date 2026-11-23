@@ -15,12 +15,18 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <BlynkSimpleEsp32.h>
+#include <DHT.h>
 
 #define PIN_LED_RED 2
 #define PIN_LED_GREEN 0
+#define PIN_DHT 23
 
 #define BLYNK_LED_RED V0
 #define BLYNK_LED_GREEN V1
+#define BLYNK_TEMPERATURE V2
+#define BLYNK_HUMIDITY V3
+
+DHT dht(PIN_DHT, DHT22);
 
 // Your WiFi credentials.
 // Set password to "" for open networks.
@@ -54,9 +60,21 @@ BLYNK_CONNECTED()
   Blynk.syncVirtual(BLYNK_LED_GREEN);
 }
 
-// This function sends Arduino's uptime every second to Virtual Pin 2.
-void myTimerEvent()
+// This function reads the DHT22 every 2 seconds and sends temperature to V2 and humidity to V3.
+void onTimerSendData()
 {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature(); // Celsius
+
+  if (isnan(humidity) || isnan(temperature))
+  {
+    Serial.println("Failed to read from DHT22 sensor!");
+    return;
+  }
+
+  Serial.printf("Temperature: %.1f C, Humidity: %.1f %%\r\n", temperature, humidity);
+  Blynk.virtualWrite(BLYNK_TEMPERATURE, temperature);
+  Blynk.virtualWrite(BLYNK_HUMIDITY, humidity);
 }
 
 void setup()
@@ -68,9 +86,11 @@ void setup()
   // Debug console
   Serial.begin(115200);
 
+  dht.begin();
+
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
   // Setup a function to be called every second
-  timer.setInterval(1000L, myTimerEvent);
+  timer.setInterval(2000L, onTimerSendData);
 }
 
 void loop()
