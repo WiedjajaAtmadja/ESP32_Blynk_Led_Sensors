@@ -17,8 +17,11 @@
 #include <BlynkSimpleEsp32.h>
 
 #define PIN_LED_RED 2
+#define PIN_LED_GREEN 0
 
 #define BLYNK_LED_RED V0
+#define BLYNK_LED_GREEN V1
+
 // Your WiFi credentials.
 // Set password to "" for open networks.
 char ssid[] = "Wokwi-GUEST";
@@ -35,9 +38,20 @@ BLYNK_WRITE(BLYNK_LED_RED)
   digitalWrite(PIN_LED_RED, value);
 }
 
+BLYNK_WRITE(BLYNK_LED_GREEN)
+{
+  // Set incoming value from pin V1 to a variable
+  int value = param.asInt();
+  Serial.printf("V1 value is: %d\r\n", value);
+  digitalWrite(PIN_LED_GREEN, value);
+}
+
 // This function is called every time the device is connected to the Blynk.Cloud
 BLYNK_CONNECTED()
 {
+  // Request the latest state from the server
+  Blynk.syncVirtual(BLYNK_LED_RED);
+  Blynk.syncVirtual(BLYNK_LED_GREEN);
 }
 
 // This function sends Arduino's uptime every second to Virtual Pin 2.
@@ -48,7 +62,9 @@ void myTimerEvent()
 void setup()
 {
   pinMode(PIN_LED_RED, OUTPUT);
+  pinMode(PIN_LED_GREEN, OUTPUT);
   digitalWrite(PIN_LED_RED, LOW);
+  digitalWrite(PIN_LED_GREEN, LOW);
   // Debug console
   Serial.begin(115200);
 
